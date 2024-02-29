@@ -24,8 +24,10 @@ class ProductsViewSet(viewsets.ModelViewSet):
             permission_classes += [IsTeacherPermission]
         elif self.action == "update":
             permission_classes += [IsPoductOwnerPermission]
-        elif self.detail==True and self.request.method=='GET':
-            permission_classes += [IsPoductOwnerPermission|IsStudentInProrductPermission]
+        elif self.detail == True and self.request.method == "GET":
+            permission_classes += [
+                IsPoductOwnerPermission | IsStudentInProrductPermission
+            ]
         return [permission() for permission in permission_classes]
 
     def get_serializer_class(self):
@@ -35,17 +37,30 @@ class ProductsViewSet(viewsets.ModelViewSet):
             serializer_class = CreateProductSerializer
         elif self.action == "update":
             serializer_class = UpdateProductSerializer
-        elif self.detail==True and self.request.method=='GET':
+        elif self.detail == True and self.request.method == "GET":
             serializer_class = ProductWithLessonsSerializer
         else:
             serializer_class = None
         return serializer_class
 
-    @action(detail=True, methods=['post'], permission_classes=[IsStudentPermission])
+    @action(detail=True, methods=["post"], permission_classes=[IsStudentPermission])
     def subscribe(self, request, pk=None):
         try:
-            res = subscribe_to_product(product_id=pk,student=request.user.student)
-
+            res = subscribe_to_product(product_id=pk, student=request.user.student)
             return Response(data=res, status=200)
         except Exception as e:
-            return Response({'error': str(e)}, status=400)
+            return Response({"error": str(e)}, status=400)
+
+    @action(
+        detail=False,
+        methods=["post"],
+        permission_classes=[IsAuthenticated],
+        serializer_class=ProductStatsSerializer,
+    )
+    def stats(self, request, pk=None):
+        try:
+            products = Product.objects.all()
+            serializer = ProductStatsSerializer(products, many=True)
+            return Response(data=serializer.data, status=200)
+        except Exception as e:
+            return Response({"error": str(e)}, status=400)

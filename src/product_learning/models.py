@@ -58,7 +58,7 @@ class Student(models.Model):
     balance = models.IntegerField(default=0, verbose_name="Баланс студента")
     products = models.ManyToManyField(
         Product,
-        related_name="products",
+        related_name="students",
         verbose_name="Продукты студента",
         blank=True,
     )
@@ -97,7 +97,10 @@ class StudentGroup(models.Model):
     """Модель группы студентов на продукте"""
 
     product = models.ForeignKey(
-        Product, on_delete=models.CASCADE, related_name="product_groups",verbose_name="Продукт группы"
+        Product,
+        on_delete=models.CASCADE,
+        related_name="product_groups",
+        verbose_name="Продукт группы",
     )
     name = models.CharField(max_length=150, verbose_name="Название группы")
 
@@ -112,6 +115,10 @@ class StudentGroup(models.Model):
         verbose_name = "Группа студентов"
         verbose_name_plural = "Группы студентов"
         ordering = ["-id"]
+
+    @property
+    def students_count(self):
+        return self.students.count()
 
     def __str__(self):
         return f"Группа {str(self.name)} продукта {self.product.name}"

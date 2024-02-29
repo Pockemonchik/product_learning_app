@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.db.models import Avg, Count
 from .models import *
 
 
@@ -6,6 +7,30 @@ class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = "__all__"
+
+
+class ProductStatsSerializer(serializers.ModelSerializer):
+    student_count = serializers.SerializerMethodField()
+    fullness_percent = serializers.SerializerMethodField()
+    purchase_percent = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Product
+        fields = ("name", "student_count", "fullness_percent", "purchase_percent")
+
+    def get_student_count(self, obj):
+        return obj.students.count()
+
+    def get_fullness_percent(self, obj):
+        average_student_in_group = (
+            obj.product_groups.all()
+            .annotate(students_count=Count("students"))
+            .aggregate(Avg("students_count", default=0))
+        )["students_count__avg"]
+        return average_student_in_group / obj.max_group_size * 100
+
+    def get_purchase_percent(self, obj):
+        return obj.students.count() / Student.objects.count() * 100
 
 
 class ProductListSerializer(serializers.ModelSerializer):
@@ -30,8 +55,11 @@ class ProductWithLessonsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Product
-        fields = ("id","name","lessons",)
-
+        fields = (
+            "id",
+            "name",
+            "lessons",
+        )
 
 
 class CreateProductSerializer(serializers.ModelSerializer):
@@ -40,7 +68,6 @@ class CreateProductSerializer(serializers.ModelSerializer):
         exclude = ("creator",)
 
     def create(self, validated_data):
-        print("user.teacher", self.context["request"])
         product = Product.objects.create(
             creator=self.context["request"].user.teacher, **validated_data
         )
